@@ -1,0 +1,56 @@
+#include <LiquidCrystal.h>
+#include <Servo.h>
+#include <IRremote.h>
+
+// Initialize components (Pins: RS=12, E=11, D4=5, D5=4, D6=3, D7=2)
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+Servo myServo;
+const int RECV_PIN = 7;
+
+// Your verified button code for '1'
+const unsigned long SECRET_CODE = 0xC; 
+
+void setup() {
+  Serial.begin(9600);
+  lcd.begin(16, 2);
+  myServo.attach(6);
+  IrReceiver.begin(RECV_PIN, ENABLE_LED_FEEDBACK);
+  
+  myServo.write(0); // Start in the locked position
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("System Locked");
+}
+
+void loop() {
+  if (IrReceiver.decode()) {
+    unsigned long command = IrReceiver.decodedIRData.command;
+    
+    // Debugging print to check codes in Serial Monitor
+    Serial.print("Command received: 0x");
+    Serial.println(command, HEX);
+
+    // Filter out empty toggle signals
+    if (command != 0) {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+
+      if (command == SECRET_CODE) {
+        lcd.print("Access Granted!");
+        myServo.write(90); // Open the hatch
+        delay(3000);       // Wait 3 seconds
+        myServo.write(0);  // Close the hatch
+      } else {
+        lcd.print("Access Denied!");
+        delay(1500);       // Wait 1.5 seconds
+      }
+      
+      // Reset screen back to default state
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("System Locked");
+    }
+    
+    IrReceiver.resume(); // Ready for the next remote signal
+  }
+}
